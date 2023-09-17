@@ -1,38 +1,77 @@
-import requests
+import asyncio
+import aiohttp
 import json
 
-# my api key ... genrated by my account    openweathermap.org
+API_KEY = "6dee1cebfab04c0f01810073f2ac480a" 
 
-API_KEY = "6dee1cebfab04c0f01810073f2ac480a"  
-
-def fetching_dataof_city(city_name):
+async def fetch_data(city_name, session):
     web_url = "http://api.openweathermap.org/data/2.5/weather"
     params = {
         'q': city_name,
         'appid': API_KEY
     }
 
-    response = requests.get(web_url, params=params)
-    if response.status_code == 200:
-        data = response.json()
-        return data
-    else:
-        print(f"Failed to fetch data for {city_name}. Return Status code: {response.status_code}")
-        return None
+    async with session.get(web_url, params=params) as response:
+        if response.status == 200:
+            data = await response.json()
+            return city_name, data
+        else:
+            print(f"Failed to fetch data for {city_name}. Return Status code: {response.status}")
+            return city_name, None
 
-def store_fetching_dataof_city(city_names):
-    city_weather_data = {}
+async def fetch_all_data(city_names):
+    async with aiohttp.ClientSession() as session:
+        tasks = [fetch_data(city_name, session) for city_name in city_names]
+        return await asyncio.gather(*tasks)
 
-    for city_name in city_names:
-        city_data = fetching_dataof_city(city_name)
-        if city_data:
-            city_weather_data[city_name] = city_data
+def store_fetching_data_of_city(city_data):
+    city_weather_data = {city_name: data for city_name, data in city_data if data}
 
     with open("weather_data.json", "w") as json_file:
         json.dump(city_weather_data, json_file, indent=4)
 
 if __name__ == "__main__":
-    #Example cities mai bad m ar add kr lon gi 
-    cities = ["London", "Paris", "New York", "Tokyo"]
+    cities = ['New York', 
+              'Hoboken', 
+              'Hudson',  
+              'Long Island City', 
+              'Jersey City', 
+              'Weehawken', 
+              'Queensbridge Houses', 
+              'Union City', 
+              'West New York', 
+              'Brooklyn', 
+              'Kings', 
+              'Manhattan', 
+              'New York County', 
+              'Guttenberg', 
+              'Carnegie Hill', 
+              'North Bergen', 
+              'Secaucus', 
+              'Bayonne', 
+              'City Line', 
+              'Fairview', 
+              'East New York', 
+              'Oak Island Junction', 
+              'Cliffside Park', 
+              'Bensonhurst', 
+              'North Beach', 
+              'Lyndhurst', 
+              'Edgewater', 
+              'Harrison', 
+              'Kearny', 
+              'Ridgefield', 
+              'North Arlington', 
+              'East Newark', 
+              'Newark', 
+              'Bronx County', 
+              'Moonachie', 
+              'Lyndhurst',
+               'Coney Island', 
+              'Palisades Park', 
+              'Belleville', 
+              'Rutherford']  
 
-    store_fetching_dataof_city(cities)
+    loop = asyncio.get_event_loop()
+    city_data = loop.run_until_complete(fetch_all_data(cities))
+    store_fetching_data_of_city(city_data)
